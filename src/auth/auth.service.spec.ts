@@ -13,6 +13,7 @@ import { LoginDto, RegisterDto } from './auth.dto';
 import { ArgumentMetadata } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 class CustomValidationPipe extends ValidationPipe {
   transform(value: any, metadata: ArgumentMetadata) {
@@ -124,6 +125,22 @@ describe('AuthService', () => {
         'password must be longer than or equal to 1 characters',
       ]);
     });
+
+    it('should throw HttpException with INTERNAL_SERVER_ERROR on login failure', async () => {
+      jest.spyOn(userRepository, 'findOne').mockImplementation(() => {
+        throw new Error('Database error');
+      });
+      try {
+        await authService.login({
+          email: 'test@example.com',
+          password: 'password',
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect(error.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+        expect(error.response).toBe('Failed to login');
+      }
+    });
   });
 
   describe('register', () => {
@@ -148,6 +165,7 @@ describe('AuthService', () => {
         }),
       );
     });
+
     it('duplicate email', async () => {
       try {
         await authService.register({
@@ -161,6 +179,7 @@ describe('AuthService', () => {
         expect(error.response).toBe('User already exists');
       }
     });
+
     it('invalid data format', async () => {
       const dto = plainToInstance(RegisterDto, {
         email: '',
@@ -181,6 +200,25 @@ describe('AuthService', () => {
         'name must be longer than or equal to 1 characters',
         'birthDate must be a valid ISO 8601 date string',
       ]);
+    });
+
+    it('show throw HttpException with BAD_REQUEST on register failure', async () => {
+      jest.spyOn(userRepository, 'save').mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      try {
+        await authService.register({
+          email: 'test1@test.com',
+          password: 'password',
+          name: 'Test',
+          birthDate: new Date('1990-01-01'),
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect(error.status).toBe(500);
+        expect(error.response).toBe('Failed to register user');
+      }
     });
   });
 });
