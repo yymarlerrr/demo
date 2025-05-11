@@ -71,7 +71,7 @@ export class AuthService {
       const isMatched = await bcrypt.compare(password, user?.password);
 
       if (!isMatched) {
-        throw new HttpException('Invalid password', HttpStatus.BAD_REQUEST);
+        throw new HttpException('Invalid password', HttpStatus.UNAUTHORIZED);
       }
 
       const age = dayjs().diff(birthDate, 'year');

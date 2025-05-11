@@ -92,7 +92,7 @@ describe('AuthService', () => {
           password: 'wrong_password',
         });
       } catch (error) {
-        expect(error.status).toBe(400);
+        expect(error.status).toBe(401);
         expect(error.response).toBe('Invalid password');
       }
     });
@@ -133,6 +133,23 @@ describe('AuthService', () => {
       try {
         await authService.login({
           email: 'test@example.com',
+          password: 'password',
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect(error.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+        expect(error.response).toBe('Failed to login');
+      }
+    });
+
+    it('should handle bcrypt.compare error', async () => {
+      jest.spyOn(bcrypt, 'compare').mockImplementation(() => {
+        throw new Error('bcrypt error');
+      });
+
+      try {
+        await authService.login({
+          email: 'test@test.com',
           password: 'password',
         });
       } catch (error) {
